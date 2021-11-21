@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <!--[if IE 8
+        ]><style>
+          .ie8 .alert-circle {
+            display: none;
+          }
+          .ie8 .alert-box {
+            padding-top: 75px;
+          }
+          .ie8 .alert-sec-text {
+            top: 45px;
+          }
+        </style><!
+      [endif]-->
+    <title>系统正在安装中</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #e6eaeb;
+            font-family: Arial, "微软雅黑", "宋体", sans-serif;
+        }
+
+        .alert-box {
+            display: none;
+            position: relative;
+            margin: 96px auto 0;
+            padding: 180px 85px 22px;
+            border-radius: 10px 10px 0 0;
+            background: #fff;
+            box-shadow: 5px 9px 17px rgba(102, 102, 102, 0.75);
+            width: 286px;
+            color: #fff;
+            text-align: center;
+        }
+
+        .alert-box p {
+            margin: 0;
+        }
+
+        .alert-circle {
+            position: absolute;
+            top: -50px;
+            left: 111px;
+        }
+
+        .alert-sec-circle {
+            stroke-dashoffset: 0;
+            stroke-dasharray: 735;
+            transition: stroke-dashoffset 1s linear;
+        }
+
+        .alert-sec-text {
+            position: absolute;
+            top: 11px;
+            left: 188px;
+            width: 76px;
+            color: #000;
+            font-size: 68px;
+        }
+
+        .alert-sec-unit {
+            font-size: 34px;
+        }
+
+        .alert-body {
+            margin: 35px 0;
+        }
+
+        .alert-head {
+            color: #242424;
+            font-size: 28px;
+        }
+
+        .alert-concent {
+            margin: 25px 0 14px;
+            color: #7b7b7b;
+            font-size: 18px;
+        }
+
+        .alert-concent p {
+            line-height: 27px;
+        }
+
+        .alert-btn {
+            display: block;
+            border-radius: 10px;
+            background-color: #4ab0f7;
+            height: 55px;
+            line-height: 55px;
+            width: 286px;
+            color: #fff;
+            font-size: 20px;
+            text-decoration: none;
+            letter-spacing: 2px;
+        }
+
+        .alert-btn:hover {
+            background-color: #6bc2ff;
+        }
+    </style>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</head>
+
+<body class="ie8">
+<div id="dd-alert-box" class="alert-box">
+    <svg class="alert-circle" width="234" height="234">
+        <circle cx="117" cy="117" r="108" fill="#FFF" stroke="#43AEFA" stroke-width="17"></circle>
+        <circle id="dd-sec-circle" class="alert-sec-circle" cx="117" cy="117" r="108" fill="transparent"
+                stroke="#F4F1F1"
+                stroke-width="18" transform="rotate(-90 117 117)"></circle>
+        <text class="alert-sec-unit" x="90" y="172" fill="#BDBDBD">&nbsp%</text>
+    </svg>
+    <div id="dd-sec-text" class="alert-sec-text"></div>
+    <div class="alert-body">
+        <div id="dd-alert-head" class="alert-head"></div>
+        <div class="alert-concent">
+            <p>DD包(压缩后): <span id="dd-img-max-size">0GB</span></p>
+            <p>已读取(压缩后): <span id="dd-img-read-size">0GB</span></p>
+            <p>已写入(压缩前): <span id="dd-img-write-size">0GB</span></p>
+            <p>写入速度: <span id="dd-img-write-speed">0MB/S</span></p>
+            <p>块大小: <span id="dd-img-block-size">10MB</span></p>
+        </div>
+        <a id="dd-alert-btn" class="alert-btn" href="#">退出系统安装进程</a>
+    </div>
+</div>
+<script>
+    // 初始化
+    var req_addr = window.location.host + window.location.pathname;
+    if (req_addr[req_addr.length - 1] !== "/") {
+        req_addr += "/";
+    }
+    document.getElementById("dd-alert-box").style.display = "block";
+    document.getElementById("dd-alert-head").innerHTML = "系统正在安装中...";
+    var _progress = 0;
+    document.getElementById("dd-sec-text").innerHTML = _progress;
+    document.getElementById("dd-alert-btn").style.display = "none";
+    document.getElementById("dd-alert-btn").onclick = function (event) {
+        if (event.preventDefault) {
+            event.preventDefault();
+        }
+        if (confirm("您确定要结束系统安装进程吗?")) {
+            $.ajax({
+                url: "http://" + req_addr + "proc_exit",
+                dataType: "json",
+                success: function (data) {
+                    if (data.code === 0) {
+                        alert("退出系统安装进程成功");
+                    } else {
+                        alert(data.message);
+                    }
+                },
+                error: function () {
+                    alert("请求失败,请稍后重试");
+                }
+            });
+        }
+    };
+
+    function setProgress(progress) {
+        if (progress > 100) {
+            progress = 100;
+        }
+        if (_progress >= 100 && progress > 99) {
+            // 进度条已经满了,无需做任何操作
+            return;
+        }
+
+        _progress = progress;
+        document.getElementById("dd-sec-text").innerHTML = _progress;
+        if (_progress === 100) {
+            document.getElementById("dd-sec-text").style.left = "172px";
+            document.getElementById("dd-alert-head").innerHTML = "系统安装成功";
+            document.title = "系统安装成功";
+        }
+
+        document.getElementById("dd-sec-circle").style.strokeDashoffset = ((Math.round(735 / 100) * _progress) * -1).toString();
+    }
+
+    var ws = new WebSocket("ws://" + req_addr + "ws");
+    var ws_ping_timer;
+    ws.onopen = function (evt) {
+        console.log("websocket opened");
+        ws_ping_timer = setInterval(function () {
+            ws.send("ping");
+        }, 6000);
+    };
+    ws.onclose = function (evt) {
+        clearInterval(ws_ping_timer);
+        console.log("websocket closed");
+        alert("WebSocket连接已关闭,请刷新页面");
+    };
+    ws.onmessage = function (evt) {
+        if (evt.data === "pong") {
+            // 服务端心跳,不处理
+            return;
+        }
+        let data = JSON.parse(evt.data);
+        if (data.type === "progress") {
+            if (data.inst_failed) {
+                document.getElementById("dd-alert-head").innerHTML = "系统安装失败: " + data.inst_failed_message;
+                document.title = "系统安装失败";
+                setProgress(0);
+            } else {
+                setProgress(data.progress);
+            }
+            if (data.proc_exit_btn) {
+                document.getElementById("dd-alert-btn").style.display = "block";
+            } else {
+                document.getElementById("dd-alert-btn").style.display = "none";
+            }
+            document.getElementById("dd-img-max-size").innerHTML = data.dd_img_max_size;
+            document.getElementById("dd-img-write-speed").innerHTML = data.dd_img_write_speed;
+            document.getElementById("dd-img-block-size").innerHTML = data.dd_img_block_size;
+            document.getElementById("dd-img-write-size").innerHTML = data.dd_img_write_size;
+            document.getElementById("dd-img-read-size").innerHTML = data.dd_img_read_size;
+        } else {
+            console.log("unknown message: ", data);
+        }
+    };
+    ws.onerror = function (evt) {
+        console.log("websocket error");
+        clearInterval(ws_ping_timer);
+        alert("WebSocket连接遇到错误,请刷新页面");
+    };
+</script>
+</body>
+</html>
