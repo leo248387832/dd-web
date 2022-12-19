@@ -1,4 +1,4 @@
-module github.com/flyqie/dd-web
+module github.com/leo248387832/dd-web
 
 go 1.17
 
